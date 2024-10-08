@@ -12,11 +12,26 @@ app.get('/',(req,res)=>{
   res.send("Welocome to my restaurant");
 })
 
+//middleware
+const logRequest=(req,res,next)=>{
+  console.log(`[${new Date().toLocaleString()}] Request made to ${req.originalUrl}`);
+  next();
+}
+
+app.use(logRequest);
+
+const passport=require('./auth');
+app.use(passport.initialize());
+const localAuthmiddleware=passport.authenticate('local',{session:false});
+
+
 const personRoute=require('./routes/personRoute')
-app.use('/person',personRoute)
+app.use('/person',personRoute);
 
 const menuRoute=require('./routes/menuRoute');
 app.use('/menu',menuRoute);
+
+app.use(passport.initialize());
 
 app.listen(PORT,()=>{
   console.log("listening on port 3000");

@@ -1,8 +1,9 @@
 const express=require('express');
 const router=express.Router();
 const person=require('../models/person');
+const {jwtAuthMiddleware,generateToken}=require('../jwt');
 
-router.post('/',async (req,res)=>{
+router.post('/signup',async (req,res)=>{
   try{
     const data=req.body;
   
@@ -10,7 +11,17 @@ router.post('/',async (req,res)=>{
     
     const response=await newPerson.save();
     console.log("data is saved");
-    res.status(200).json(response);
+
+    const payload={
+      id:response.id,
+      username:response.username
+    }
+
+    console.log(JSON.stringify(payload));
+    const token=generateToken(payload);
+    console.log('Token is :',token);
+
+    res.status(200).json({response:response,token:token});
   
   }
   catch(err){
@@ -19,7 +30,43 @@ router.post('/',async (req,res)=>{
   }
 })
   
-router.get('/', async (req,res)=>{
+//login route
+
+router.post('/login', async(req,res)=>{
+  try{
+    const {username,password}=req.body;
+    const user=await person.findOne({username:username});
+    if(!user || !(await user.comparePassword(password)))
+    {
+      return res.status(401).json({error:'Incorrect Username or Password'})
+    }
+
+    const payload={
+      id:user.id,
+      username:user.username
+    }
+
+    const token=generateToken(payload);
+    res.json({token:token});
+  }catch(err){
+    console.log(err);
+    res.status(500).json({Error:"Internal Server Error"});
+  }
+})
+
+router.get('/profile',jwtAuthMiddleware,async (req,res)=>{
+  try{
+    const userData=req.user;
+    console.log(userData);
+    const response=await person.findById(userData.id);
+    res.status(200).json(response);
+  }catch(err){
+    console.log(err);
+    res.status(500).json({Error:"Internal Server Error"});
+  }
+})
+
+router.get('/',jwtAuthMiddleware,async (req,res)=>{
   try{
     const data= await person.find();
     console.log("data is fetched");
